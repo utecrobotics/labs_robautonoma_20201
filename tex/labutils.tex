@@ -1,0 +1,118 @@
+
+\definecolor{lbcolor}{rgb}{0.9,0.9,0.9}
+\definecolor{colorkey}{rgb}{0,0,1}
+\definecolor{colorcomment}{rgb}{0, 0.6, 0.3}
+\definecolor{colorstring}{rgb}{0.627,0.126,0.941}
+\definecolor{colornumber}{rgb}{0.205, 0.142, 0.73}
+\definecolor{forestgreen}{RGB}{34,139,34}
+\definecolor{orangered}{RGB}{239,134,64}
+\definecolor{darkblue}{rgb}{0.0,0.0,0.6}
+\definecolor{gray}{rgb}{0.4,0.4,0.4}
+\definecolor{orangered2}{RGB}{128,0,0}
+
+\newtcblisting{listingshell}
+{
+  listing only,
+  colframe=white,
+  listing options={
+    basicstyle=\small\ttfamily,
+    % columns=full,
+    columns=fullflexible,
+    literate=
+      {\$}{{\textcolor{blue}{\$ }}}{1}
+      {\~} {$\sim$}{1}
+  },
+}
+
+\newtcblisting{listingnodollar}
+{
+  listing only,
+  colframe=white,
+  listing options={
+    basicstyle=\small\ttfamily,
+    % columns=full,
+    columns=fullflexible,
+    literate=
+    %   {\$}{{\textcolor{blue}{\$ }}}{1}
+      {\~} {$\sim$}{1}
+  },
+}
+
+\newtcblisting{listingpython}[1]{%
+  listing only,
+  colframe=gray!20!white,
+  coltitle=black,
+  title=\footnotesize{#1},
+  listing options={
+    language=python,
+    upquote=true,
+    basicstyle=\small\ttfamily,
+    columns=fullflexible,
+    extendedchars=false,
+    breaklines=true,
+    showtabs=false,
+    showspaces=false,
+    showstringspaces=false,
+    identifierstyle=\ttfamily,
+    keywordstyle=\color{colorkey},
+    commentstyle=\color{colorcomment},
+    stringstyle=\color{colorstring},
+    numberstyle=\color{colornumber},
+    breaklines=True,
+    floatplacement=H
+  },
+}
+
+
+\newtcblisting{listingxml}[1]{%
+  listing only,
+  colframe=gray!20!white,
+  coltitle=black,
+  title=\footnotesize{#1},
+  listing options={
+    language=XML,
+    basicstyle=\small\ttfamily,
+    columns=fullflexible,
+    extendedchars=false,
+    breaklines=true,
+    showtabs=false,
+    showspaces=false,
+    showstringspaces=false,
+    identifierstyle=\ttfamily,
+    commentstyle=\color{gray},
+    keywordstyle=\color{orangered2},
+    stringstyle=\color{black},
+    tagstyle=\color{colorkey},
+    morekeywords={attribute,xmlns,version,type,release,package,name,
+      description,maintainer,license,buildtool_depend,build_depend,
+      run_depend, length, radius, rpy, xyz, rgba, link, joint,
+      effort, velocity, lower, upper},
+    otherkeywords={attribute=, xmlns=},
+  },
+}
+
+
+\newtcblisting{listingpython2}{%
+  listing only,
+  colframe=gray!20!white,
+  coltitle=black,
+  listing options={
+    language=python,
+    upquote=true,
+    basicstyle=\small\ttfamily,
+    columns=fullflexible,
+    extendedchars=false,
+    breaklines=true,
+    showtabs=false,
+    showspaces=false,
+    showstringspaces=false,
+    identifierstyle=\ttfamily,
+    keywordstyle=\color{colorkey},
+    commentstyle=\color{colorcomment},
+    stringstyle=\color{colorstring},
+    numberstyle=\color{colornumber},
+    morekeywords={self}
+    breaklines=True,
+    floatplacement=H
+  },
+}
