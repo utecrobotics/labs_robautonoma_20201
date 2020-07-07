@@ -1,0 +1,225 @@
+\documentclass[a4paper,11pt]{robotlabs}
+
+% Makes tables look nicer
+\usepackage{booktabs}
+\renewcommand{\arraystretch}{1.2}
+
+
+% To change size of verbatim
+\usepackage{verbatimbox}
+\include{commands}
+\include{labutils}
+\title{
+  \textbf{Laboratorio 4 \\ SLAM y Navegación de un Robot Móvil}
+  \date{}
+}
+
+\begin{document}
+
+\course{Robótica Autónoma 2020-1}
+\period{2020-1}
+\labnumber{4}
+\labname{SLAM y Navegación de un Robot Móvil}
+
+% Carátula
+% -----------
+\thispagestyle{empty}
+\begin{center}
+\textbf{{\huge Universidad de Ingenier\'ia y Tecnolog\'ia}\\ [.5cm]
+ {\LARGE Departamento de Ingenier\'ia  Mecatr\'onica}\\[3cm]
+}
+{\includegraphics[width=6cm]{images/utec}}\\[3cm]
+\end{center}
+
+\begin{center}
+  {\LARGE \textbf{Robótica Autónoma}}\\[0.8cm]
+  {\Large \textbf{Profesor: Oscar Ramos Ponce}}\\[3.0cm]
+  {\Large \textbf{Laboratorio 4}}\\[0.5cm]
+  {\Large \textbf{SLAM y Navegación de un Robot Móvil}}\\[4.8cm] %[2.0cm]
+  {\Large \textbf{Lima - Perú}} \\[0.5cm]
+  {\LARGE \textbf{2020-1}}
+\end{center}
+
+\newpage
+\maketitle
+\thispagestyle{fancyplain}
+
+\section{Objetivos}
+
+\begin{itemize}
+\item Obtener el mapa bidimensional de un entorno usando SLAM a través del
+  paquete llamado \textit{gmapping}.
+\item Generar movimiento autónomo para un robot móvil para llegar a una
+  posición y orientación deseados usando el paquete \textit{amcl}.
+\end{itemize}
+
+\section{Equipo y Materiales}
+
+\begin{table*}[h]
+  \centering
+  \begin{tabular}{cc}
+    \toprule
+    \textbf{Descripción} & \textbf{Cantidad} \\
+    \midrule
+    Computadora con conexi\'on a internet & 1 \\
+    \bottomrule
+    \end{tabular}
+  \end{table*}
+
+\section{Aspectos Generales}
+
+Para la presentación del reporte  del laboratorio se debe tener en cuenta lo
+siguiente.
+\begin{itemize}
+\item El reporte debe ser desarrollado utilizando cualquier editor de texto,
+  pero debe ser presentado en formato pdf a través del buzón de
+  Canvas.
+\item En el reporte se debe indicar claramente la sección para la cual se está
+  brindando la respuesta a la correspondiente actividad.
+\item La presentación del reporte se realizará hasta el término de la sesión de
+  laboratorio.
+\item Se trabajará en grupos de 2 y 3 personas y solo es necesario que un
+  integrante de cada grupo presente el reporte, indicando el nombre de los
+  integrantes del grupo.
+\end{itemize}
+Para trabajar en este laboratorio, es necesario actualizar el repositorio de
+git clonado en el laboratorio anterior. Para ello, se debe ir a la carpeta
+\texttt{autlabs} y se debe ejecutar \texttt{git pull}:
+\begin{listingshell}
+$ cd ~/lab_ws/src/autlabs
+$ git pull
+\end{listingshell}
+\noindent Una vez realizado esto, dentro de la carpeta \texttt{autlabs} se debe
+tener una nueva carpeta llamada \texttt{autlab4}, que es un paquete de ROS y es
+donde se trabajará este laboratorio.
+
+\noindent \textit{Nota}: dado que en este laboratorio se utilizará el modelo
+waffle\_pi del robot \textit{Turtlebot3}, es necesario definir una variable de
+entorno llamada \texttt{TURTLEBOT3\_MODEL} con valor igual a
+\texttt{waffle\_pi}. Esta variable fue añadida a \texttt{.bashrc} en el
+laboratorio 1, así que no debería haber problemas. En caso que se esté
+trabajando en una nueva máquina (o nuevo entorno de ROSDS) es necesario
+configurar esta variable como se realizó en el laboratorio 1.
+
+
+\section{Localización y Mapeo Simultáneos Obstáculos (7 pts)}
+
+Para obtener un mapa en 2 dimensiones se utilizará los datos obtenidos a través
+de un LiDAR que funciona en el plano XY y que publica los rangos medidos en el
+tópico llamado \texttt{/scan}. El paquete denominado \texttt{gmapping} utiliza
+los datos de profundidad en un plano horizontal para realizar el mapa del
+entorno mientras se localiza simultáneamente al robot móvil dentro del mapa
+generado. Este paquete se encuentra configurado para leer los datos de este
+tópico donde publica el LiDAR.
+
+Como primer paso, se requiere instalar los siguientes paquetes en la
+computadora (o verificar que se encuentran instalados): \texttt{map\_server},
+\texttt{move\_base}, \texttt{amcl}, \texttt{dwa\_local\_planner} y
+\texttt{gmapping}. Pueden ser instalados usando \texttt{apt-get install},
+anteponiendo al nombre del paquete \texttt{ros-kinetic} o \texttt{ros-melodic},
+según sea el caso, y reemplazando los guiones bajos por guiones. Por ejemplo,
+para instalar el paquete \texttt{move\_base} con ROS Melodic se tendría el
+comando \texttt{sudo apt-get install ros-melodic-move-base}.
+
+Una vez que los paquetes necesarios hayan sido instalados, se debe lanzar el
+entorno de Gazebo donde se tiene un robot turtlebot3 simulado usando:
+\begin{listingshell}
+$ roslaunch autlab4 turtlebot3_world1.launch
+\end{listingshell}
+%$
+\noindent Luego, se debe ejecutar los siguientes dos comandos, cada uno desde
+un terminal diferente:
+\begin{listingshell}
+$ roslaunch autlab4 show_map.launch 
+$ roslaunch autlab4 turtlebot3_slam_mapping.launch 
+\end{listingshell}
+\noindent Para crear el mapa, es necesario mover al robot. Por facilidad, y
+dado que en la práctica es bastante común, se comandará remotamente el robot de
+manera manual para generar su movimiento. Esto se puede realizar a través del
+teclado usando el nodo utilizado en el laboratorio 1
+(\texttt{turtlebot3\_teleop}).
+
+
+\paragraph{Actividades.}
+\begin{enumerate}
+\item (2 pts)  Hacer un breve resumen de lo que hace el paquete \texttt{gmapping}.
+\item (2 pts) Usando el teclado, mover al robot por todo su entorno para
+  generar un mapa del entorno. Al finalizar de generar el mapa, y
+  \underline{sin cerrar} el terminal que corre
+  \texttt{turtlebot3\_slam\_mapping}, grabar el mapa usando:
+\begin{listingshell}
+$ rosrun map_server map_saver -f mapa_world1
+\end{listingshell}
+% $
+Adjuntar una captura de pantalla que muestre el mapa obtenido. Luego, mover el
+mapa dentro de una carpeta llamada \texttt{autlab4/maps}.
+
+\item (1 pts) Abrir el mapa obtenido como si fuera una imagen (con cualquier
+  programa que permita visualizar imágenes) e indicar qué representan los
+  valores de los píxeles.
+
+\item (2 pt) Si el robot tuviese como sensor una cámara de profundidad, en
+  lugar de un LiDAR, indicar cómo se podría hacer uso del procedimiento
+  anterior para la obtención del mapa bidimensional.
+
+\end{enumerate}
+
+
+\section{Navegación (7 pts)}
+
+Para poder realizar la navegación autónoma de un robot móvil es necesario
+primero tener el mapa. En este caso, dado que ya se ha generado el mapa en la
+sección anterior, es posible utilizarlo para realizar la navegación. En esta
+sección será necesario cargar el mapa, localizar el robot dentro del mapa, y
+navegar de un punto inicial a un punto final, considerando la orientación
+adecuada. Para esto se utilizará el paquete llamado \texttt{amcl}.
+
+Inicializar nuevamente el simulador de Gazebo para este laboratorio, corriendo
+el archivo \texttt{turtlebot3\_world1.launch}. Luego, cargar el mapa
+previamente almacenado usando el siguiente comando desde otro terminal:
+\begin{listingshell}
+$ roslaunch autlab4 turtlebot3_amcl.launch map_file:=camino_a_mapa.yaml
+\end{listingshell}
+%$
+\noindent donde \texttt{camino\_a\_mapa.yaml} es la ruta absoluta al mapa
+previamente almacenado. Por ejemplo, podría ser algo como
+\texttt{/home/usuario/ros\_ws/mapa\_world1.yaml}. Luego, ejecutar RViz, desde
+un terminal diferente, para poder visualizar el entorno usando el siguiente
+comando:
+\begin{listingshell}
+$ roslaunch autlab4 view_navigation.launch --screen
+\end{listingshell}
+%$
+
+\paragraph{Actividades.}
+\begin{enumerate}
+\item (2 pts.) Hacer un breve resumen de lo que hace el paquete \texttt{amcl}.
+\item (2 pts.) En RViz, hacer click en \textit{2D Pose Estimate} e indicar
+  aproximadamente la posición inicial en la que se encuentra el robot. Una vez
+  indicada la posición, mover el robot un poco con el teclado para ayudarle a
+  su localización. Luego, hacer click en \texttt{2D Nav Goal} y hacer click en
+  alguna parte del mapa hasta donde se desea que el robot se mueva. Adjuntar en
+  el reporte todo lo mostrado, brindando una explicación objetiva de lo que se
+  observa.
+
+\item (2 pts.) Brindar las capturas de pantalla correspondientes a al menos dos
+  diferentes posiciones/orientaciones deseadas del robot móvil, donde se
+  muestre el camino que se está siguiendo.
+
+\item (1 pt.) ¿Qué sucede con la navegación cuando se añade un objeto nuevo al
+  mapa, el cual se interpone en la trayectoria del robot? 
+  
+\end{enumerate}
+
+
+
+
+\section{Conclusiones (1 pt)}
+Mencionar algunas conclusiones relevantes al desarrollo de este laboratorio.
+
+
+  
+
+\end{document}
+
+
