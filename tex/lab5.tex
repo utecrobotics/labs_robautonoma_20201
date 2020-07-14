@@ -1,0 +1,333 @@
+\documentclass[a4paper,11pt]{robotlabs}
+
+% Makes tables look nicer
+\usepackage{booktabs}
+\renewcommand{\arraystretch}{1.2}
+
+
+% To change size of verbatim
+\usepackage{verbatimbox}
+\include{commands}
+\include{labutils}
+\title{
+  \textbf{Laboratorio 5 \\ Sensores en URDF y SLAM en 3D}
+  \date{}
+}
+
+\begin{document}
+
+\course{Robótica Autónoma 2020-1}
+\period{2020-1}
+\labnumber{5}
+\labname{Sensores en URDF y SLAM en 3D}
+
+% Carátula
+% -----------
+\thispagestyle{empty}
+\begin{center}
+\textbf{{\huge Universidad de Ingenier\'ia y Tecnolog\'ia}\\ [.5cm]
+ {\LARGE Departamento de Ingenier\'ia  Mecatr\'onica}\\[3cm]
+}
+{\includegraphics[width=6cm]{images/utec}}\\[3cm]
+\end{center}
+
+\begin{center}
+  {\LARGE \textbf{Robótica Autónoma}}\\[0.8cm]
+  {\Large \textbf{Profesor: Oscar Ramos Ponce}}\\[3.0cm]
+  {\Large \textbf{Laboratorio 5}}\\[0.5cm]
+  {\Large \textbf{Sensores en URDF y SLAM en 3D}}\\[4.8cm] %[2.0cm]
+  {\Large \textbf{Lima - Perú}} \\[0.5cm]
+  {\LARGE \textbf{2020-1}}
+\end{center}
+
+\newpage
+\maketitle
+\thispagestyle{fancyplain}
+
+%\tableofcontents
+%\thispagestyle{empty}
+
+\section{Objetivos}
+
+\begin{itemize}
+\item Analizar los componentes que definen un sensor en un modelo URDF para
+  visualización y para simulación con Gazebo
+\item Incorporar un sensor Kinect sobre un robot Turtlebot3 en el modelo URDF
+  para su simulación.
+\item Obtener el mapa tridimensional de un entorno usando SLAM a través del
+  paquete llamado \textit{RTAB-Map}.
+\end{itemize}
+
+\section{Equipo y Materiales}
+
+\begin{table*}[h]
+  \centering
+  \begin{tabular}{cc}
+    \toprule
+    \textbf{Descripción} & \textbf{Cantidad} \\
+    \midrule
+    Computadora con conexi\'on a internet & 1 \\
+    \bottomrule
+    \end{tabular}
+  \end{table*}
+
+\section{Aspectos Generales}
+
+Para la presentación del reporte  del laboratorio se debe tener en cuenta lo
+siguiente.
+\begin{itemize}
+\item El reporte debe ser desarrollado utilizando cualquier editor de texto,
+  pero debe ser presentado en formato pdf a través del buzón de
+  Canvas.
+\item En el reporte se debe indicar claramente la sección para la cual se está
+  brindando la respuesta a la correspondiente actividad.
+\item La presentación del reporte se realizará hasta el término de la sesión de
+  laboratorio.
+\item Se trabajará en grupos de 2 y 3 personas y solo es necesario que un
+  integrante de cada grupo presente el reporte, indicando el nombre de los
+  integrantes del grupo.
+\end{itemize}
+Para trabajar en este laboratorio, es necesario actualizar el repositorio de
+git clonado en el laboratorio anterior. Para ello, se debe ir a la carpeta
+\texttt{autlabs} y se debe ejecutar \texttt{git pull}:
+\begin{listingshell}
+$ cd ~/lab_ws/src/autlabs
+$ git pull
+\end{listingshell}
+\noindent Una vez realizado esto, dentro de la carpeta \texttt{autlabs} se debe
+tener una nueva carpeta llamada \texttt{autlab5}, que es un paquete de ROS y es
+donde se trabajará este laboratorio.
+
+
+\section{Sensores del Robot Turtlebot3}
+
+En esta sección se busca primero comprender cómo se utiliza los sensores en
+URDF, para posteriormente poder hacer modificaciones en los sensores que tiene
+por defecto el robot Turtlebot 3. En particular, se buscará quitar la cámara
+RGB y el LiDAR, y añadir una cámara RGBD (Kinect).
+
+\subsection{Sensores en URDF y Gazebo (8 puntos) }
+
+Como se realizó en laboratorios anteriores, se puede correr usando
+\texttt{roslaunch} el archivo de lanzamiento \texttt{turtlebot3\_world.launch}
+que se encuentra en el paquete \texttt{autlab5}. De hacerlo se verá el mismo
+entorno que se observó en el laboratorio anterior. Al abrir este archivo de
+lanzamiento con un editor de texto (configurando para que sea mostrado como de
+tipo XML, de preferencia), se puede ver que internamente llama al archivo
+\texttt{urdf/turtlebot3.urdf.xacro}. Abrir este último archivo con un editor de
+texto para su análisis.
+
+
+\paragraph{Actividades.} Las preguntas de esta actividad se basan en un
+análisis del modelo URDF del robot, que se encuentra en el archivo
+\texttt{autlab5/urdf/turtlebot3.urdf.xacro}.
+
+\begin{enumerate}
+\item (1 punto) Realizar una descripción de los eslabones (\textit{links}) y
+  articulaciones (\textit{joints}) que tiene este robot, con respecto a sus
+  nombres y cómo están unidos (cuáles se unen con cuáles). No incluir los
+  elementos asociados a los sensores.
+  
+\item (1 punto) Identificar los eslabones y articulaciones asociados a los
+  sensores del robot: IMU, LiDAR (scan) y cámara RGB. Para cada uno de estos
+  sensores indicar cuál es su eslabón asociado, cuál es su articulación, cuál
+  es su posición y orientación (escoger un sistema de referencia adecuado), y
+  si tiene algún elemento que permita su visualización (malla, por ejemplo).
+
+\item (0.5 puntos) Ejecutar el archivo \texttt{turtlebot3\_world.launch} y verificar
+  los tópicos. Indicar el contenido del tópico \texttt{/tf}, indicando qué
+  sistemas de referencia relaciona y por qué se obtiene los valores mostrados
+  en el tópico. Igualmente, ejecutar \texttt{rqt\_tf\_tree} y mostrar lo
+  obtenido.
+
+\item (0.5 puntos) Abrir rviz y añadir un componente de tipo
+  RobotModel. Indicar si se puede visualizar el robot y por qué sí o por qué
+  no.
+
+\item (1 punto) En otro terminal ejecutar el nodo
+  \texttt{robot\_state\_publisher}, que está contenido en un paquete que tiene
+  ese mismo nombre. Ejecutar nuevamente \texttt{rqt\_tf\_tree}, mostrando su
+  contenido. Igualmente, mostrar el contenido del tópico \texttt{/tf} y del
+  tópico \texttt{/tf\_static}. Abrir nuevamente RViz e indicar si se puede
+  visualizar el robot.
+
+\item (0.5 puntos) A partir de lo observado, ¿qué hace
+  \texttt{robot\_state\_publisher}?
+  
+\item (1 punto) Desde el URDF que se está utilizando para el robot, se hace un
+  llamado a \texttt{turtlebot3.gazebo.xacro}. Abrir este archivo y responder:
+  ¿qué parámetros se usa dentro del tag \texttt{gazebo}? y ¿qué representan?
+
+\item (0.5 puntos) ¿Qué elementos en este archivo de simulación hacen uso de un
+  plugin, y cómo se llaman estos plugins?
+  
+\item (0.5 puntos) ¿Qué es un plugin de Gazebo y para qué se utiliza?
+
+\item (1 punto) Al inicio del archivo \texttt{turtlebot3.gazebo.xacro} hay 3
+  argumentos cuyos valores son falsos. Cambiar a verdadero el valor
+  correspondiente al láser y correr nuevamente la simulación de Gazebo. ¿Qué se
+  observa?. Luego regresar dicho valor a falso y poner a verdadero el valor
+  correspondiente a la cámara y correr nuevamente la simulación de Gazebo. ¿Qué
+  son las líneas que se observa? Responder y adjuntar los resultados de cada
+  parte.
+
+\item (0.5 puntos) En la simulación de Gazebo se observa un LiDAR sobre el Turtlebot3, pero,
+  a pesar de que hay una cámara, no se observa la cámara sobre el robot. ¿Por
+  qué sucede esto?
+  
+\end{enumerate}
+
+
+\subsection{Incorporación de Sensor Kinect al Turtlebot 3 (4 puntos)}
+
+Una vez que se ha analizado los sensores del robot en el URDF y en el modelo de
+Gazebo, en esta sección se quitará el sensor LiDAR y la cámara RGB del
+Turtlebot3 y se añadirá un Kinect (sensor RGB-D). Con este fin, primero copiar
+el archivo \texttt{turtlebot3\_world.launch} a
+\texttt{turtlebot3\_kinect\_world.launch}. Igualmente, copiar el archivo
+\texttt{turtlebot3.urdf.xacro} a
+\texttt{turtlebot3\_kinect.urdf.xacro}. Finalmente, copiar el archivo
+\texttt{turtlebot3.gazebo.xacro} a
+\texttt{turtlebot3\_kinect.gazebo.xacro}. Notar que en todos los casos es
+recomendable copiar y no renombrar los archivos.
+
+Una vez que se realizó la copia de cada uno de los archivos antes mencionados,
+modificar el archivo de lanzamiento \texttt{turtlebot3\_kinect\_world.launch}
+para que haga un llamado al modelo del robot que se encuentra en
+\texttt{turtlebot3\_kinect.urdf.xacro}. Igualmente, este último archivo deba
+hacer un llamado al archivo \texttt{turtlebot3\_kinect.gazebo.xacro}. Correr el
+archivo de tipo \texttt{launch} para verificar que hasta el momento todo esté
+funcionando. 
+
+\paragraph{Actividades.}
+
+\begin{enumerate}
+\item (1 punto) Quitar el LiDAR y la cámara RGB del modelo URDF (y de la
+  simulación de Gazebo). Indicar dónde se realizó la modificación, y mostrar el
+  modelo en Gazebo sin el LiDAR. Nota: es importante quitar todos los
+  componentes de la cámara (\textit{links} y \textit{joints} asociados,
+  inclusive) para evitar conflictos con el Kinect.
+  
+\item (1 punto) El archivo \texttt{kinect\_gazebo.txt} contiene los tags de
+  Gazebo que debe añadirse al archivo de Gazebo para poder simular el
+  robot. Por otro lado, el archivo \texttt{kinect.urdf.xacro} contiene los
+  datos relativos al Kinect (\textit{links}, \textit{joints}, etc.). Desde
+  \texttt{turtlebot3\_kinect.urdf.xacro}, incluir este archivo
+  (\texttt{kinect.urdf.xacro}) usando un tag, e indicar que el \textit{parent}
+  de este sensor es \texttt{base\_link}: 
+\begin{listingshell}
+<xacro:include filename="$(find autlab5)/urdf/kinect.urdf.xacro"/>
+<xacro:sensor_kinect parent="base_link"/>
+\end{listingshell}
+%$
+Ejecutar el archivo de lanzamiento y mostrar el robot con el Kinect sobre el
+robot.
+
+\item (0.5 puntos) Modificar adecuadamente los parámetros que sean necesarios
+  para que el Kinect aparezca en un lugar adecuado sobre el robot (no demasiado
+  arriba ni demasiado abajo). Mostrar la simulación con el sensor Kinect en un
+  lugar adecuado, así como el cambio realizado.
+  
+\item (0.5 puntos) ¿Qué plugins utiliza el sensor Kinect para la simulación de
+  Gazebo?
+
+\item (1 punto) Utilizando RViz, visualizar el robot y la nube de puntos
+  generada por el sensor Kinect. Adjuntar el resultado mostrando la nube de
+  puntos de al menos dos maneras diferentes (Puntos, cuadrados de distinto
+  tamaño, etc.)
+
+  
+\end{enumerate}
+
+
+\section{SLAM en 3D}
+
+Utilizando el sensor Kinect es posible realizar un mapeo tridimensional del
+entorno del robot usando SLAM. En esta sección se utilizará una técnica de
+RGB-D graph slam llamada RTAB-map (\textit{Real-Time Appearance-Based
+  Mapping}) que hace uso de la información que provee el sensor Kinect.
+
+\subsection{Usando el Robot Turtlebot3 con Kinect (4 pts)}
+
+Para poder realizar el escaneo tridimensional, es necesario primero instalar el
+paquete de ROS llamado rtabmap-ros de la siguiente manera
+\begin{listingshell}
+$ sudo apt-get install ros-version-rtabmap-ros
+\end{listingshell}
+%$
+\noindent donde versión puede ser \textit{kinetic} o \textit{melodic}, según
+sea el caso. Luego, iniciar la simulación del robot Turtlebot3 con Kinect de la
+sección anterior, asegurándose de que se esté publicando las relaciones entre
+los diversos sistemas de referencia de las partes del robot (en los tópicos
+\texttt{/tf} y \texttt{/tf\_static}). Para iniciar el mapeo y localización
+simultáneos en 3D es necesario correr lo siguiente desde otro terminal:
+\begin{listingshell}
+$ roslaunch rtabmap_ros rtabmap.launch rtabmap_args:="--delete_db_on_start"
+  visual_odometry:=false odom_topic:=/odom depth_topic:=/camera/depth/image_raw
+  rgb_topic:=/camera/rgb/image_raw rviz:=true rtabmapviz:=false
+\end{listingshell}
+%$
+\noindent Nota: todo el comando anterior debe estar en una sola línea. Este
+comando ejecuta RTAB map en la simulación de Gazebo del robot. En RViz puede
+ser conveniente desactivar la visualización de los sistemas de referencia
+(\textit{TF}) y puede ser útil añadir un elemento \textit{RobotModel} para
+visualizar al robot.
+
+Para crear el mapa, es necesario mover al robot, de preferencia no tan
+rápido. El movimiento del robot se realizará mediante comandos remotos
+introducidos a través del teclado, con el nodo utilizado en laboratorios
+anteriores (\texttt{turtlebot3\_teleop}).  Una vez que se termina el mapeo se
+puede cerrar los nodos ejecutados (ya que todo este proceso es
+computacionalmente costoso). El mapa generado se almacena automáticamente en
+\texttt{$\sim$/.ros/rtabmap.db}. Es importante notar que si se ejecuta
+nuevamente el comando de mapeo, se sobre escribirá este archivo (por las
+opciones que se está pasando a \texttt{rtabmap}).
+
+\paragraph{Actividades.}
+\begin{enumerate}
+\item (1 punto)  ¿Cómo funciona RTAB-map? Brindar una descripción.
+\item (1 punto) Realizar un mapa 3D del entorno en el cual se encuentra el
+  robot. Mover el robot usando el teclado como en laboratorios
+  anteriores. Adjuntar una captura de pantalla del mapa final obtenido en
+  RViz. Nota: una vez que se termina de realizar el mapa, es recomendable
+  cerrar gazebo y el programa que realiza el mapeo.
+\item (1 punto) Una vez que se tiene el archivo que contiene el mapa
+  (almacenado por defecto en \texttt{$\sim$/.ros/rtabmap.db}), abrir el archivo
+  de la siguiente manera:
+\begin{listingshell}
+  $ rtabmap-databaseViewer rtabmap.db
+\end{listingshell}
+%$
+donde se tiene que proporcionar la ruta adecuada al archivo. Explorar el
+visualizador y mostrar algunas vistas diferentes del mapa generado (por
+ejemplo, las celdas de ocupación (\textit{occupancy grids}) y la vista gráfica
+(\textit{graph view}).
+
+\item (0.5 puntos) ¿Qué tipos de movimiento ayudan más al mapeo? Es decir, en
+  ¿en qué casos sería recomendable girar o avanzar/retroceder?
+
+\item (0.5 puntos) ¿Qué significa cada uno de los argumentos del comando de
+  \texttt{rtabmap\_ros} que se usa para iniciar el mapeo?
+
+\end{enumerate}
+
+
+\subsection{Usando otro Robot (3 pts)}
+
+Al igual que en el laboratorio anterior, utilizar el modelo de algún robot
+móvil (terrestre o aéreo) disponible en URDF para ROS, el cual no disponga de
+un sensor RGB-D. Añadir un sensor RBG-D (Kinect, en este caso) al robot
+escogido y realizar el mapeo de algún entorno (puede ser el mismo entorno o un
+entorno diferente de Gazebo). Se debe mostrar algunas indicaciones de lo
+realizado y, de ser posible, el mapa obtenido.
+
+
+\section{Conclusiones (1 pt)}
+
+Mencionar algunas conclusiones relevantes al desarrollo de este laboratorio.
+
+
+  
+
+\end{document}
+
