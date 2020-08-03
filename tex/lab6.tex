@@ -1,0 +1,284 @@
+\documentclass[a4paper,11pt]{robotlabs}
+
+% Makes tables look nicer
+\usepackage{booktabs}
+\renewcommand{\arraystretch}{1.2}
+
+
+% To change size of verbatim
+\usepackage{verbatimbox}
+\include{commands}
+\include{labutils}
+\title{
+  \textbf{Laboratorio 6 \\ Localización y Fusión de Datos}
+  \date{}
+}
+
+\begin{document}
+
+\course{Robótica Autónoma 2020-1}
+\period{2020-1}
+\labnumber{6}
+\labname{Localización y Fusión de Datos}
+
+% Carátula
+% -----------
+\thispagestyle{empty}
+\begin{center}
+\textbf{{\huge Universidad de Ingenier\'ia y Tecnolog\'ia}\\ [.5cm]
+ {\LARGE Departamento de Ingenier\'ia  Mecatr\'onica}\\[3cm]
+}
+{\includegraphics[width=6cm]{images/utec}}\\[3cm]
+\end{center}
+
+\begin{center}
+  {\LARGE \textbf{Robótica Autónoma}}\\[0.8cm]
+  {\Large \textbf{Profesor: Oscar Ramos Ponce}}\\[3.0cm]
+  {\Large \textbf{Laboratorio 6}}\\[0.5cm]
+  {\Large \textbf{Localización y Fusión de Datos}}\\[4.8cm] %[2.0cm]
+  {\Large \textbf{Lima - Perú}} \\[0.5cm]
+  {\LARGE \textbf{2020-1}}
+\end{center}
+
+\newpage
+\maketitle
+\thispagestyle{fancyplain}
+
+%\tableofcontents
+%\thispagestyle{empty}
+
+\section{Objetivos}
+
+\begin{itemize}
+\item Aplicar un filtro de Kalman a una unidad de medida inercial (IMU) para
+  estimar la posición y orientación de un robot móvil.
+\item Predecir el movimiento de un robot móvil diferencial usando el modelo
+  basado en entradas de velocidad lineal y angular.
+\item Aplicar un filtro de Kalman extendido (EKF) para localizar un robot
+  usando mediciones de un IMU y de ARTags detectados mediante una cámara RBG
+  montada sobre un robot Turtlebot3 simulado en Gazebo.
+\end{itemize}
+
+\section{Equipo y Materiales}
+
+\begin{table*}[h]
+  \centering
+  \begin{tabular}{cc}
+    \toprule
+    \textbf{Descripción} & \textbf{Cantidad} \\
+    \midrule
+    Computadora con conexi\'on a internet & 1 \\
+    \bottomrule
+    \end{tabular}
+  \end{table*}
+
+\section{Aspectos Generales}
+
+Para la presentación del reporte  del laboratorio se debe tener en cuenta lo
+siguiente.
+\begin{itemize}
+\item El reporte debe ser desarrollado utilizando cualquier editor de texto,
+  pero debe ser presentado en formato pdf a través del buzón de
+  Canvas.
+\item En el reporte se debe indicar claramente la sección para la cual se está
+  brindando la respuesta a la correspondiente actividad.
+\item Se trabajará en grupos de 2 o 3 personas y solo es necesario que un
+  integrante de cada grupo presente el reporte, indicando el nombre de los
+  integrantes del grupo.
+\end{itemize}
+Para trabajar en este laboratorio, es necesario actualizar el repositorio de
+git clonado en el laboratorio anterior. Para ello, se debe ir a la carpeta
+\texttt{autlabs} y se debe ejecutar \texttt{git pull}:
+\begin{listingshell}
+$ cd ~/lab_ws/src/autlabs
+$ git pull
+\end{listingshell}
+\noindent Una vez realizado esto, dentro de la carpeta \texttt{autlabs} se debe
+tener una nueva carpeta llamada \texttt{autlab6}, que es un paquete de ROS y es
+donde se trabajará este laboratorio.
+
+
+\section{Unidad de Medida Inercial (6 pts)}
+
+El robot Turtlebot3 posee algunos sensores propioceptivos y
+exteroceptivos. Dentro de los sensores propioceptivos que posee, se encuentra
+la unidad de medida inercial (IMU). Para esta sección se puede lanzar el
+siguiente entorno de Gazebo:
+\begin{listingshell}
+$ roslaunch autlab6 turtlebot3_world1.launch
+\end{listingshell}
+%$
+\noindent Este archivo inserta una instancia del robot en el entorno de
+Gazebo. Este robot se inicializa con los sensores definidos en su URDF. Así,
+los valores del IMU son publicados por el simulador (Gazebo). En un caso real,
+estos valores tendrían que ser leidos directamente de un IMU y se requeriría un
+nodo que los enviase a un tópico.
+
+En esta sección se realizará la estimación de la posición del robot por
+integración numérica, y se generará el \textit{framework} básico que será
+utilizado en las siguientes secciones.
+
+
+\paragraph{Actividades} 
+
+\begin{enumerate}
+
+\item (1 punto) Crear un nodo llamado \texttt{mover\_cuadrado.py} que envíe los
+  comandos de velocidad necesarios (al tópico \texttt{/cmd\_vel}) para que el
+  robot simulado se mueva aproximadamente en un cuadrado (la longitud del lado
+  del cuadrado puede ser escogida arbitrariamente). Adjuntar el código del nodo
+  y algunas capturas de pantalla del movimiento en Gazebo.
+
+\item (1 punto) Verificar el URDF del robot Turtlebot3 e indicar dónde se
+  encuentra el IMU con respecto al sistema de la base del robot
+  (\texttt{base\_link}). Igualmente, indicar dónde se encuentran las ruedas del
+  robot con respecto a la base del mismo, y dónde se encuentra el punto medio
+  entre ambas ruedas.
+  
+\item (4 punto) Crear un nodo llamado \texttt{imu\_integr.py} que se suscriba
+  al tópico publicado por el IMU (llamado \texttt{/imu}). Este nodo debe
+  integrar numéricamente las mediciones de velocidad y aceleración para estimar
+  la posición y orientación del robot móvil. El nodo debe, además, publicar la
+  posición y orientación estimada con el IMU (de \texttt{base\_footprint} con
+  respecto a \texttt{/odom}) como un \texttt{tf}. A esto se suele llamar hacer
+  un \textit{broadcast} de un TF. Si se implementa adecuadamente, se debe poder
+  visualizar desde RViz el movimiento del robot describiendo aproximadamente un
+  cuadrado (se debe escoger \texttt{odom} como \texttt{base\_frame} en
+  RViz). Incluir capturas de pantalla, un gráfico de la posición estimada
+  (x-y), y comentarios de los resultados.
+
+  \textit{Ayuda:} En la carpeta \texttt{src} hay un ejecutable llamado
+  \texttt{tfbroadcast.py} que se puede usar como ejemplo para saber cómo
+  realizar el \textit{broadcast} (al ejecutar, en RViz se debe observar una
+  posición y orientación arbitraria del robot).
+
+\end{enumerate}  
+
+\section{Estimación de Posición usando el IMU}
+
+En esta sección se hará uso del filtro de Kalman para poder estimar la posición
+y orientación del robot, con base en el sensor de medida inercial. Este filtro
+requiere de un modelo de movimiento, para la predicción, y de un modelo de
+medición, para la actualización o corrección. El modelo de medición estará dado
+por las lecturas que realiza el IMU (velocidad angular y aceleración lineal),
+mientras que se considerará dos casos de modelo de movimiento.
+
+\subsection{Usando un Modelo de Movimiento Genérico (6 pts)}
+
+Suponiendo que se desconoce por completo el modelo de movimiento que tiene el
+robot, o que no se tiene acceso ni a sus comandos de velocidad ni a los
+encoders de las ruedas, lo mejor que se puede hacer es estimar un movimiento
+genérico de posición y velocidad con base en la expansión de Taylor.
+
+\paragraph{Actividades} 
+
+\begin{enumerate}
+\item (5 pts) Crear un nodo llamado \texttt{estimacion1.py} que implemente un
+  filtro de Kalman para estimar la posición y orientación del robot móvil. Este
+  filtro debe utilizar un modelo de movimiento genérico, y el modelo de
+  medición debe incluir las lecturas necesarias del IMU. Se puede escoger
+  arbitrariamente la frecuencia a la que se lee el IMU, y se debe escoger
+  apropiadamente los estados del filtro de Kalman. Para probar el
+  funcionamiento del programa, utilizar el movimiento anterior, en el que el
+  robot describe aproximadamente un cuadrado.
+
+  Se debe adjuntar el modelo de movimiento y medición (teóricos), el programa
+  desarrollado, una gráfica de la estimación (plano x-y), y comentarios de los
+  resultados.
+
+\item (1 pt) Realizar una variación de los valores de las matrices de
+  covarianza $R$ y $Q$ en el modelo anterior. Mostrar la gráfica de la
+  estimación (plano x-y) y comentar los resultados obtenidos.
+  
+\end{enumerate}
+
+\subsection{Usando un Modelo de Velocidad (4 pts)}
+
+En esta sección se supone que se conoce los valores de velocidad lineal y de
+velocidad angular que se da al robot como señales de control. El conocimiento
+de dichos valores permite estimar la posición y orientación del robot a modo de
+predicción. 
+
+\paragraph{Actividad (4 pts).} 
+Crear un nodo llamado \texttt{estimacion2.py} que implemente un filtro de
+Kalman extendido usando como modelo de predicción el modelo de movimiento
+basado en velocidad (slide 15 del tema 8). Para los valores de velocidad, el
+nodo se puede suscribir al tópico \texttt{/cmd\_vel}. El modelo de medición
+será el mismo que el utilizado en la sección anterior. Probar el funcionamiento
+con el movimiento en el que el robot describe aproximadamente un cuadrado.
+
+Se debe adjuntar el modelo de movimiento, de medición, así como las
+linealizaciones realizadas. Igualmente, se debe adjuntar el programa
+desarrollado, una gráfica de la estimación (plano x-y), y comentarios de los
+resultados.
+
+\section{Fusión de Datos del IMU y ARTags (4 pts)}
+
+En esta sección se fusionará las mediciones del IMU con las mediciones de
+posición de los ARTags, obtenidos a partir de la cámara del robot, para
+mejorar la estimación de la posición y orientación del robot. Con este fin, se
+seguirá utilizando la trayectoria cuadrada anterior, y se debe localizar al
+menos 3 ARTags en el entorno de Gazebo. Los ARTags fueron generados en el
+primer laboratorio y se deben encontrar dentro de la carpeta
+\texttt{.gazebo}. Según lo realizado en el primer laboratorio, debe haber hasta
+18 marcadores: de \texttt{marker0} a \texttt{marker17}. Un ejemplo de cómo
+agregar un marcador se puede encontrar en la línea 104 del archivo
+\texttt{worlds/turtlebot3\_ar.world}. Para visualizar este archivo, ejecutar:
+\begin{listingshell}
+$ roslaunch autlab6 turtlebot3_aarworld.launch
+\end{listingshell}
+%$
+\noindent Se debe observar un ARTag (\textit{marker} número 0) en la posición
+$(2,1)$, con una orientación de 90 grados. Como se muestra en el archivo
+indicado, se puede añadir más marcadores (tienen que ser diferentes, para su
+fácil detección). La posición de cada marcador se describe dentro del tag
+llamado \texttt{pose} y es $x, y, z$ (donde $z=0$ ya que se está en el plano)
+seguido de la orientación $r_x, r_y, r_z$ (donde $r_z$ es la rotación alrededor del
+eje $z$, y los otros dos valores deben ser cero ya que se está en el plano
+$x,y$). 
+
+\paragraph{Actividad (4 pts).} 
+Crear un nodo llamado \texttt{estimacion3.py} que implemente un filtro de
+Kalman extendido usando como modelo de predicción el modelo de movimiento
+basado en velocidad, al igual que en el caso anterior. El modelo de movimiento
+debe incluir las lecturas del IMU y las lecturas de los ARTags, realizados con
+la cámara. La frecuencia con la que se lee ambos sensores puede ser diferente,
+y se tiene que tener en cuenta que para la actualización (o corrección) del
+filtro solo se toma la medición realizada en dicho instante de tiempo (no se
+almacena mediciones). La lectura de los ARTags debe realizarse como en el
+primer laboratorio. Probar el funcionamiento con el movimiento en el que el
+robot describe aproximadamente un cuadrado.
+
+Se debe adjuntar el modelo de movimiento, de medición, así como las
+linealizaciones realizadas. Igualmente, se debe adjuntar el programa
+desarrollado, una gráfica de la estimación (plano $x$-$y$), y comentarios de los
+resultados.
+
+  
+
+\section*{Nota}
+
+Si bien no es necesario para este laboratorio la visualización de la matriz de
+covarianza como elipse, esta vizualización puede ser útil en muchos casos para
+saber visualmente cuán seguro se está sobre la posición y orientación del
+robot. Para visualizar esta elipse en RViz, se puede utilizar el paquete
+llamado \texttt{rviz\_plugin\_covariance}, el cual puede ser clonado en el
+repositorio \texttt{https://github.com/laas/rviz\_plugin\_covariance}. Una vez
+clonado, se debe compilar ya que contiene código de C. Para visualizar, en RViz
+se debe añadir un elemento llamado \textit{PoseWithCovariance}. Luego, se puede
+ejecutar, por ejemplo \texttt{send\_covariance\_msgs\_2D.py}, que se encuentra
+en la carpeta \texttt{scripts} del repositorio clonado, para visualizar la
+elipse y una flecha que indica la orientación. Modificando adecuadamente este
+nodo se puede añadir la visualización de la covarianza para las posiciones y
+orientaciones del robot.
+
+
+
+\end{document}
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "lab6"
+%%% End:
